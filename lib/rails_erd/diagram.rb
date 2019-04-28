@@ -175,10 +175,25 @@ module RailsERD
       @callbacks ||= self.class.send(:callbacks)
     end
 
+    # only option support regular expression
+    # Example: bundle exec rake erd only="/^Base/"
+    def only_condition_with_reg_match(options, entity)
+      if options[:only].present? && entity.model
+        only_fields = [options[:only]].flatten.map(&:to_s)
+        if only_fields.size==1 && only_fields.first[0]=='/'
+          reg_exp = only_fields.first.delete('/')
+          Regexp.new(reg_exp).match(entity.name) ? false : true
+        else
+          ![options[:only]].flatten.map(&:to_sym).include?(entity.name.to_sym)
+        end
+      end
+    end
+
     def filtered_entities
+
       @domain.entities.reject { |entity|
         options.exclude.present? && entity.model && [options.exclude].flatten.map(&:to_sym).include?(entity.name.to_sym) or
-        options[:only].present? && entity.model && ![options[:only]].flatten.map(&:to_sym).include?(entity.name.to_sym) or
+        only_condition_with_reg_match(options, entity) or
         !options.inheritance && entity.specialized? or
         !options.polymorphism && entity.generalized? or
         !options.disconnected && entity.disconnected?
