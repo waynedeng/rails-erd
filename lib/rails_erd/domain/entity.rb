@@ -34,8 +34,26 @@ module RailsERD
       # model (for concrete entities) or given name (for abstract entities).
       attr_reader :name
 
+      # Table comments from database
+      attr_reader :comment
+      attr_reader :column_comments
+
       def initialize(domain, name, model = nil) # @private :nodoc:
         @domain, @name, @model = domain, name, model
+        retrieve_table_comment
+      end
+
+      # Retrieve table and column comments from database 
+      # using methods provided by gem migration_comments
+      def retrieve_table_comment
+        @column_comments = {}
+        if @model && @model.respond_to?(:table_name)
+          adapter = @model.connection
+          if adapter.respond_to?(:retrieve_table_comment)
+            @comment = @model.connection.retrieve_table_comment(@model.table_name)
+            @column_comments = @model.connection.retrieve_column_comments(@model.table_name)
+          end
+        end
       end
 
       # Returns an array of attributes for this entity.
